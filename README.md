@@ -53,7 +53,7 @@ project-root/
    - AWS_ACCESS_KEY_ID
    - AWS_SECRET_ACCESS_KEY
 
-![GitHub Secrets Configuration](docs/images/github-secrets.png)
+![GitHub Secrets Configuration](docs/images/github-secrets-tab.png)
 
 ### 2. Bootstrap Infrastructure
 
