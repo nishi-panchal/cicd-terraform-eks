@@ -1,36 +1,163 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# CI/CD Pipeline with AWS EKS and Terraform
 
-## Getting Started
+This project demonstrates a complete CI/CD pipeline using GitHub Actions to deploy a Next.js application to Amazon EKS (Elastic Kubernetes Service) with infrastructure managed by Terraform.
 
-First, run the development server:
+## Architecture
+WIP
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Prerequisites
+
+- AWS Account with appropriate permissions
+- GitHub Account
+- AWS CLI installed and configured
+- Terraform installed (v1.0+)
+- kubectl installed
+- Docker installed
+
+## Project Structure
+```
+project-root/
+├── .github/
+│ └── workflows/
+│ └── deploy.yml
+├── terraform/
+│ ├── bootstrap/
+│ │ ├── main.tf
+│ │ ├── variables.tf
+│ │ └── outputs.tf
+│ ├── main.tf
+│ ├── variables.tf
+│ ├── outputs.tf
+│ ├── ecr.tf
+│ ├── eks.tf
+│ └── vpc.tf
+├── k8s/
+│ └── deployment.yml
+├── app/
+│ └── page.js
+├── Dockerfile
+└── next.config.mjs
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Step-by-Step Setup Guide
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+### 1. Initial Setup
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Clone this repository
+2. Configure AWS credentials locally:
+   ```bash
+   aws configure
+   ```
+3. Create GitHub repository and push code
+4. Add AWS credentials to GitHub Secrets:
+   - AWS_ACCESS_KEY_ID
+   - AWS_SECRET_ACCESS_KEY
 
-## Learn More
+![GitHub Secrets Configuration](docs/images/github-secrets.png)
 
-To learn more about Next.js, take a look at the following resources:
+### 2. Bootstrap Infrastructure
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Initialize and apply bootstrap configuration:
+   ```bash
+   cd terraform/bootstrap
+   terraform init
+   terraform plan
+   terraform apply
+   ```
+   This creates:
+   - S3 bucket for terraform state
+   - DynamoDB table for state locking
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+![Bootstrap Resources](docs/images/s3-screenshot.png)
+![Bootstrap Resources](docs/images/dynamodb-screenshot.png)
 
-## Deploy on Vercel
+### 3. Main Infrastructure Deployment
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. Initialize main terraform configuration:
+   ```bash
+   cd ../
+   terraform init
+   terraform plan
+   terraform apply
+   ```
+   This creates:
+   - VPC and networking components
+   - EKS cluster
+   - ECR repository
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+![EKS Cluster](docs/images/eks-cluster.png)
+
+### 4. Application Deployment
+
+1. Configure kubectl for EKS:
+   ```bash
+   aws eks update-kubeconfig --name cicd-terraform-eks-cluster --region us-east-1
+   ```
+
+2. Push code to main branch to trigger GitHub Actions pipeline:
+   ```bash
+   git add .
+   git commit -m "Initial application deployment"
+   git push origin main
+   ```
+
+![GitHub Actions Workflow](docs/images/github-actions.png)
+
+## Testing the Deployment
+
+1. Check EKS pods and services:
+   ```bash
+   kubectl get pods
+   kubectl get svc cicd-terraform-eks-service
+   ```
+
+2. Access the application:
+   - Get the LoadBalancer URL from the service output
+   - Open in browser: http://<LOADBALANCER_URL>
+
+3. Verify AWS resources:
+   - Check ECR for Docker images
+   - Check EKS for running pods
+   - Check EC2 for running nodes
+
+![Application Running](docs/images/app-running.png)
+
+## Resource Cleanup
+
+To avoid unnecessary AWS charges, clean up resources when done:
+
+1. Delete Kubernetes resources:
+   ```bash
+   kubectl delete -f k8s/deployment.yml
+   ```
+
+2. Destroy terraform resources:
+   ```bash
+   # In main terraform directory
+   terraform destroy
+
+   # In bootstrap directory
+   cd bootstrap
+   terraform destroy
+   ```
+
+3. Additional cleanup:
+   - Delete ECR images
+   - Remove GitHub Secrets if needed
+
+## Common Issues and Solutions
+
+1. **Docker Build Fails**:
+   - Verify Dockerfile configuration
+   - Check next.config.mjs settings
+
+2. **EKS Connection Issues**:
+   - Verify AWS credentials
+   - Check VPC and subnet configuration
+   - Ensure security group settings
+
+3. **GitHub Actions Failures**:
+   - Verify GitHub Secrets
+   - Check workflow file syntax
+   - Ensure proper IAM permissions
+
