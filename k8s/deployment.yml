@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cicd-terraform-eks
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: cicd-terraform-eks
+  template:
+    metadata:
+      labels:
+        app: cicd-terraform-eks
+    spec:
+      containers:
+      - name: cicd-terraform-eks
+        image: 443370686445.dkr.ecr.us-east-1.amazonaws.com/cicd-terraform-eks:latest
+        ports:
+        - containerPort: 3000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cicd-terraform-eks-service
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 3000
+  selector:
+    app: cicd-terraform-eks 
